@@ -34,7 +34,34 @@
   p { margin: 0 0 8px; color: var(--text-secondary); }
   code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
   .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-top: 16px; }
-  .note { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--surface-2); border-radius: 4px; color: var(--text-secondary); }
+  kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    padding: 1px 6px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px;
+    background: var(--surface-2); color: var(--text-primary);
+  }
+  .help summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+  .help summary::-webkit-details-marker { display: none; }
+  .help summary::before { content: "▸"; color: var(--text-muted); transition: transform .15s; }
+  .help[open] summary::before { transform: rotate(90deg); }
+  .help summary h2 { margin: 0; }
+  .help[open] summary { margin-bottom: 12px; }
+  .steps { list-style: none; counter-reset: step; padding: 0; margin: 12px 0 0; display: grid; gap: 12px; }
+  .steps li { counter-increment: step; position: relative; padding-left: 36px; color: var(--text-secondary); }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 0; top: 0;
+    width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #111;
+    font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center;
+  }
+  .steps strong { color: var(--text-primary); display: block; }
+  .tips { margin: 0; padding-left: 20px; color: var(--text-secondary); }
+  .tips li { margin-bottom: 4px; }
+  .check { margin-top: 8px; }
+  .check input { width: 220px; }
+  .check-status { font-size: 12px; color: var(--text-muted); }
+  .check-status.ok { color: var(--text-primary); }
+  .check-status.ok::before { content: "✓ "; color: #3ec27a; }
+  .check-status.bad { color: var(--text-primary); }
+  .check-status.bad::before { content: "✗ "; color: #e34948; }
   nav { display: flex; gap: 4px; margin-top: 16px; }
   nav button { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); padding: 6px 14px; border-radius: 6px; cursor: pointer; }
   nav button.active { background: var(--surface-2); color: var(--text-primary); border-color: var(--accent); }
@@ -110,12 +137,49 @@
   </nav>
 
   <section id="tab-capture">
-    <div class="card note">
-      <strong>Before you start:</strong> the capture has to see your raw key presses, so <code>a</code> and <code>;</code> must be <em>plain keys</em> while recording.
-      In Bazecor, copy your layer to a spare one and put plain <code>A</code> and <code>;</code> back on the home row (or switch Superkeys off on those two keys), and use that layer here.
-      Then type normally. For a capital, hold <code>a</code> or <code>;</code> exactly as you would hold your home-row Shift. The page knows from the text which presses were meant as Shift.
-      Typos are fine: the cursor waits for the right key, so just keep going. Wired USB gives cleaner timings than wireless.
-    </div>
+    <details class="card help" id="setup-help" open>
+      <summary><h2>Set up Bazecor before capturing</h2></summary>
+      <p>The capture needs your raw key presses. While <kbd>a</kbd> and <kbd>;</kbd> are Superkeys the keyboard sends Shift instead of the press itself, so turn them into plain keys on a test layer first. Your Superkeys and their settings stay as they are.</p>
+
+      <ol class="steps">
+        <li>
+          <strong>Make a test layer.</strong>
+          In the <em>Layout Editor</em>, select an unused layer, open its layer menu and choose <em>Copy from layer</em>. Pick the layer you normally type on.
+        </li>
+        <li>
+          <strong>Put plain keys on the home row.</strong>
+          On the test layer, click the <kbd>a</kbd> Superkey and assign the plain <kbd>A</kbd> key. Do the same for <kbd>;</kbd>. Leave all other keys alone.
+        </li>
+        <li>
+          <strong>Save.</strong>
+          Click <em>Save changes</em>.
+        </li>
+        <li>
+          <strong>Switch to the test layer.</strong>
+          Use a layer key, or set it as <em>Default layer</em> under <em>Keyboard Settings → General</em> while you capture.
+        </li>
+        <li>
+          <strong>Check it.</strong>
+          Hold <kbd>a</kbd> for a second in the field below, then <kbd>;</kbd>. Both should repeat like normal letters.
+          <div class="row check">
+            <input id="check-field" placeholder="Hold a, then ;" autocomplete="off" spellcheck="false">
+            <span id="check-a" class="check-status">a: not tested</span>
+            <span id="check-semicolon" class="check-status">;: not tested</span>
+          </div>
+        </li>
+      </ol>
+
+      <h3>While you type</h3>
+      <ul class="tips">
+        <li>For a capital, hold <kbd>a</kbd> or <kbd>;</kbd> exactly like your home-row Shift, then press the letter. The page uses the text to tell which presses were meant as Shift.</li>
+        <li>Typos are fine. The cursor waits for the right key, so just keep going.</li>
+        <li>Use the USB cable if you can. Wireless adds jitter to the timings.</li>
+        <li><kbd>Esc</kbd> ends a session early and saves it.</li>
+      </ul>
+
+      <h3>When you're done</h3>
+      <p>Switch back to your normal layer, and reset <em>Default layer</em> if you changed it.</p>
+    </details>
 
     <div class="card">
       <div class="row">

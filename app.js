@@ -148,6 +148,13 @@
     typing.textContent = `Saved: ${c.pos} characters, ${countLabels(session, "tap")} a/; taps, ${countLabels(session, "hold")} Shift holds. Start another session or go to Analyze.`;
   }
 
+  // YYYY-MM-DD HH:MM:SS in local time, 24 hour clock.
+  function formatDate(iso) {
+    const d = new Date(iso);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
   function countLabels(session, label) {
     return Object.values(session.labels).filter((l) => l === label).length;
   }
@@ -254,6 +261,21 @@
       $("#capture-warn").textContent = "The window lost focus, key releases may be missing. Finish and start a new session if this was mid-word.";
     }
   });
+  // Setup check: a plain key auto-repeats when held, a home-row Superkey
+  // sends Shift instead (left Shift for a, right Shift for ;).
+  const setStatus = (id, cls, text) => {
+    const node = $(id);
+    node.className = "check-status " + cls;
+    node.textContent = text;
+  };
+  $("#check-field").addEventListener("keydown", (e) => {
+    if (e.code === "KeyA" && e.repeat) setStatus("#check-a", "ok", "a is a plain key");
+    if (e.code === "Semicolon" && e.repeat) setStatus("#check-semicolon", "ok", "; is a plain key");
+    if (e.code === "ShiftLeft" && !e.repeat) setStatus("#check-a", "bad", "a sent Left Shift, still a Superkey on this layer");
+    if (e.code === "ShiftRight" && !e.repeat) setStatus("#check-semicolon", "bad", "; sent Right Shift, still a Superkey on this layer");
+  });
+  if (sessions.length) $("#setup-help").open = false;
+
   $("#start").addEventListener("click", startCapture);
   $("#finish").addEventListener("click", finishCapture);
 
@@ -317,7 +339,7 @@
       const name = window.CORPUS[s.textName] ? window.CORPUS[s.textName].name : s.textName;
       const tr = el("tr", {},
         el("td", {}, cb),
-        el("td", {}, new Date(s.createdAt).toLocaleString()),
+        el("td", { class: "mono" }, formatDate(s.createdAt)),
         el("td", {}, name),
         el("td", { class: "num" }, String(s.target.length)),
         el("td", { class: "num" }, String(countLabels(s, "tap"))),
