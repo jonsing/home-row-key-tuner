@@ -1,0 +1,16 @@
+const Core = require("../tuner-core.js");
+const { synthSession } = require("./synthetic.js");
+const prepared = [1, 2, 3].map((s) => Core.prepare(synthSession(600, s)));
+const current = { holdTimeout: 130, overlapThreshold: 80, minHoldTime: 80, minPriorInterval: 75 };
+console.log("events", prepared.reduce((n, p) => n + p.events.length, 0));
+console.log("current", JSON.stringify((({ taps, holds, falseHolds, falseTaps }) => ({ taps, holds, falseHolds, falseTaps }))(Core.evaluate(prepared, current))));
+let t0 = Date.now();
+const it = Core.search(prepared, { falseHold: 1, falseTap: 1 });
+let r;
+while (!(r = it.next()).done);
+console.log("search ms", Date.now() - t0, "evaluated", r.value.length);
+for (const x of r.value.slice(0, 3)) console.log(JSON.stringify(x.params), x.falseHolds, x.falseTaps, x.neighbourCost.toFixed(2));
+t0 = Date.now();
+for (const k of Core.PARAM_KEYS) Core.sweep(prepared, current, k);
+console.log("sweeps ms", Date.now() - t0);
+console.log(Object.fromEntries(Object.entries(Core.timingStats(prepared)).map(([k, v]) => [k, Array.isArray(v) ? [v.length, Core.percentile(v, 50)] : v])));

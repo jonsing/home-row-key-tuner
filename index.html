@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home-row Shift tuner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --surface-2: #242422;
+    --border: #3a3936;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --accent: #9085e9;
+    /* Series identity: false Shift = orange, missed Shift = blue. */
+    --series-false-hold: #d95926;
+    --series-false-tap: #3987e5;
+    --grid: #2e2e2b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  h3 { font-size: 14px; margin: 16px 0 8px; color: var(--text-secondary); }
+  p { margin: 0 0 8px; color: var(--text-secondary); }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-top: 16px; }
+  .note { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--surface-2); border-radius: 4px; color: var(--text-secondary); }
+  nav { display: flex; gap: 4px; margin-top: 16px; }
+  nav button { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); padding: 6px 14px; border-radius: 6px; cursor: pointer; }
+  nav button.active { background: var(--surface-2); color: var(--text-primary); border-color: var(--accent); }
+  button.primary, button.secondary { padding: 6px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
+  button.primary { background: var(--accent); border: 1px solid var(--accent); color: #111; font-weight: 600; }
+  button.secondary { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-primary); }
+  button:disabled { opacity: .5; cursor: default; }
+  select, input, textarea { background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font: inherit; }
+  input[type=number] { width: 80px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .hidden { display: none !important; }
+
+  #typing {
+    margin-top: 12px; padding: 20px; min-height: 140px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    font: 22px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; outline: none;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  #typing:focus { border-color: var(--accent); }
+  #typing .done { color: var(--text-muted); }
+  #typing .cur { border-bottom: 2px solid var(--accent); }
+  #typing .cur.err { background: rgba(217, 89, 38, .35); }
+  #typing .missedcap { text-decoration: underline wavy var(--series-false-tap); }
+  #typing.idle { color: var(--text-muted); font-size: 16px; }
+
+  .tiles { display: flex; gap: 12px; flex-wrap: wrap; }
+  .tile { background: var(--surface-2); border-radius: 8px; padding: 10px 14px; min-width: 150px; }
+  .tile .label { color: var(--text-secondary); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .tile .value { font-size: 24px; font-weight: 600; }
+  .tile .sub { color: var(--text-muted); font-size: 12px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+  th { color: var(--text-secondary); font-weight: 500; font-size: 12px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.best td { background: var(--surface-2); }
+
+  .settings label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--text-secondary); }
+  .progress { height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; width: 200px; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; }
+
+  .charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .chart { position: relative; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart .title { font-size: 13px; color: var(--text-primary); margin-bottom: 4px; }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--surface-0); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; font-size: 12px; white-space: nowrap; z-index: 2;
+  }
+
+  .output { font: 15px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; background: var(--surface-2); padding: 12px; border-radius: 6px; max-height: 260px; overflow: auto; }
+  .output .fh { text-decoration: underline 2px var(--series-false-hold); text-underline-offset: 3px; }
+  .output .ft { text-decoration: underline wavy 2px var(--series-false-tap); text-underline-offset: 3px; }
+  .output .shiftmark { color: var(--series-false-hold); font-size: 11px; vertical-align: super; }
+  .timeline { white-space: nowrap; }
+  .timeline .q { color: var(--text-primary); font-weight: 600; }
+  .timeline span { margin-right: 8px; color: var(--text-secondary); }
+  .warn { color: #e0a33a; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Home-row Shift tuner</h1>
+  <p>Records how you really type, then runs the recording through a port of the Dygma Fast Superkeys (Qukeys) firmware logic to see which settings would have produced a false Shift or missed one.</p>
+
+  <nav>
+    <button data-tab="capture" class="active">1. Capture</button>
+    <button data-tab="analyze">2. Analyze</button>
+    <button data-tab="data">Data</button>
+  </nav>
+
+  <section id="tab-capture">
+    <div class="card note">
+      <strong>Before you start:</strong> the capture has to see your raw key presses, so <code>a</code> and <code>;</code> must be <em>plain keys</em> while recording.
+      In Bazecor, copy your layer to a spare one and put plain <code>A</code> and <code>;</code> back on the home row (or switch Superkeys off on those two keys), and use that layer here.
+      Then type normally. For a capital, hold <code>a</code> or <code>;</code> exactly as you would hold your home-row Shift. The page knows from the text which presses were meant as Shift.
+      Typos are fine: the cursor waits for the right key, so just keep going. Wired USB gives cleaner timings than wireless.
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <label>Text <select id="corpus"></select></label>
+        <label>Length <select id="length"><option value="300">short</option><option value="600" selected>medium</option><option value="1200">long</option></select></label>
+        <button class="primary" id="start">Start session</button>
+        <button class="secondary hidden" id="finish">Finish and save</button>
+        <span id="capture-status" class="mono"></span>
+      </div>
+      <textarea id="custom-text" class="hidden" rows="3" style="width:100%;margin-top:8px" placeholder="Paste your own text. Anything other than letters, digits, spaces and . , ; ' - is dropped."></textarea>
+      <div id="typing" tabindex="0" class="idle">Press "Start session", then type the text that appears here. Esc finishes early.</div>
+      <p id="capture-warn" class="warn"></p>
+    </div>
+  </section>
+
+  <section id="tab-analyze" class="hidden">
+    <div class="card">
+      <h2>Sessions</h2>
+      <div id="session-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>Settings to test</h2>
+      <div class="row settings">
+        <label>Hold timeout <input type="number" id="p-holdTimeout" min="1" max="255"></label>
+        <label>Overlap threshold <input type="number" id="p-overlapThreshold" min="0" max="100"></label>
+        <label>Minimum hold time <input type="number" id="p-minHoldTime" min="1" max="254"></label>
+        <label>Minimum prior interval <input type="number" id="p-minPriorInterval" min="1" max="254"></label>
+        <label>Cost of a false Shift <input type="number" id="w-falseHold" min="0" step="0.5" value="1"></label>
+        <label>Cost of a missed Shift <input type="number" id="w-falseTap" min="0" step="0.5" value="1"></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="secondary" id="simulate">Simulate these settings</button>
+        <button class="primary" id="search">Find best settings</button>
+        <button class="secondary" id="reset-current">Reset to my current settings</button>
+        <div class="progress hidden" id="progress"><div></div></div>
+      </div>
+    </div>
+
+    <div id="results" class="hidden">
+      <div class="card">
+        <h2>Result for <span id="result-params" class="mono"></span></h2>
+        <div class="tiles" id="tiles"></div>
+      </div>
+
+      <div class="card hidden" id="ranking-card">
+        <h2>Best settings found</h2>
+        <p>Ranked by cost, ties broken by how well the neighbouring settings do (a pick in the middle of a good region holds up better on a different day).</p>
+        <table id="ranking"></table>
+      </div>
+
+      <div class="card">
+        <h2>What each setting does to your recording</h2>
+        <p>Each chart moves one setting and keeps the other three at the values above. The dashed line is the value being tested.</p>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--series-false-hold)"></i>False Shift (letter became Shift)</span>
+          <span><i class="swatch" style="background:var(--series-false-tap)"></i>Missed Shift (Shift became letter)</span>
+        </div>
+        <div class="charts" id="charts"></div>
+      </div>
+
+      <div class="card">
+        <h2>Errors under these settings</h2>
+        <div id="misses"></div>
+      </div>
+
+      <div class="card">
+        <h2>Simulated output</h2>
+        <p>What the keyboard would have sent for the most recent selected session.
+          <span class="fh">orange</span> = typed while a false Shift was active (<span class="shiftmark">⇧</span> marks where a letter was swallowed), <span class="ft">blue wavy</span> = a Shift that came out as a letter.</p>
+        <div class="output" id="output"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Your raw timing</h2>
+      <p>Straight from the recordings, independent of any setting. Milliseconds unless noted.</p>
+      <div id="stats"></div>
+    </div>
+  </section>
+
+  <section id="tab-data" class="hidden">
+    <div class="card">
+      <h2>Data</h2>
+      <p>Sessions are stored in this browser (localStorage). Export them to keep a copy or to move them between machines.</p>
+      <div class="row">
+        <button class="secondary" id="export">Export JSON</button>
+        <label class="secondary" style="cursor:pointer">Import JSON <input type="file" id="import" accept="application/json" class="hidden"></label>
+        <button class="secondary" id="clear">Delete all sessions</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="qukeys-sim.js"></script>
+<script src="tuner-core.js"></script>
+<script src="corpus.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
