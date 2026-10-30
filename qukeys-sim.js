@@ -7,6 +7,10 @@
 // The port keeps the firmware's quirks on purpose (e.g. processQueue() does not
 // return after the minimum-prior-interval flush), because the goal is to
 // predict what the keyboard does, not what it should do.
+//
+// Based on Kaleidoscope-Qukeys, Copyright (C) 2017-2019 Michael Richters, with
+// Dygma's changes. Licensed under the GNU General Public License v3 or later,
+// see LICENSE.
 (function (root) {
   "use strict";
 

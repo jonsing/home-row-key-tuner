@@ -19,3 +19,7 @@ With Fast Superkeys on, the firmware rewrites a superkey that has only a tap key
 node --test test/*.test.js
 node test/bench.js
 ```
+
+## License
+
+GPL-3.0, see [LICENSE](LICENSE). The simulator is a port of the GPL-licensed Qukeys plugin from Kaleidoscope (Michael Richters) as modified by Dygma, so the whole project uses the same license.
